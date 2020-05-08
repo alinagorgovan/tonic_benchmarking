@@ -29,13 +29,15 @@ impl Echo for EchoService {
 #[cfg(unix)]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = "/tmp/tonic/helloworld";
+    let path = "/tmp/tonic/echo_sock";
 
     tokio::fs::create_dir_all(Path::new(path).parent().unwrap()).await?;
 
     let mut uds = UnixListener::bind(path)?;
 
     let greeter = EchoService::default();
+    
+    println!("EchoServer listening on {}", path);
 
     Server::builder()
         .add_service(EchoServer::new(greeter))

@@ -23,7 +23,7 @@ tonic-build = "0.2"
 criterion = "0.3"
 
 [[bin]] # Bin to run the HelloWorld gRPC server
-name = "server"
+name = "tcp_server"
 path = "src/tcp_server.rs"
 
 [[bin]] # Bin to run the HelloWorld gRPC server
@@ -31,5 +31,5 @@ name = "bench"
 path = "src/bench.rs"
 
 [[bin]] # Bin to run the HelloWorld gRPC server
-name = "uds"
+name = "unix_server"
 path = "src/unix_server.rs"

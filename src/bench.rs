@@ -24,7 +24,7 @@ fn random_string(n: usize) -> String {
 }
 
 macro_rules! bench {
-    ($name:ident, $message_size:expr, $count:expr) => {
+    ($name:ident, $message_size:expr, $count:expr, $sock_type:expr) => {
         fn $name(b: &mut Bencher) {
             let mut rt = Builder::new()
                 .basic_scheduler()
@@ -37,16 +37,17 @@ macro_rules! bench {
             b.iter(|| {
                 for _ in 0..$count {
                     let _result = rt.block_on( async {
-                                    let mut client = EchoClient::connect("http://[::1]:50051").await?;
-                                    // let channel = tonic::transport::Endpoint::from_static("lttp://[::]:50051")
-                                    //                 .connect_with_connector(service_fn(|_: Uri| {
-                                    //                     let path = "/tmp/tonic/helloworld";
-
-                                    //                     // Connect to a Uds socket
-                                    //                     UnixStream::connect(path)
-                                    //                 }))
-                                    //                 .await?;
-                                    // let mut client = EchoClient::new(channel);
+                                    let mut client = if $sock_type == "tcp" {
+                                        EchoClient::connect("http://[::1]:50051").await?
+                                    } else {
+                                        let channel = tonic::transport::Endpoint::from_static("lttp://[::]:50051")
+                                                        .connect_with_connector(service_fn(|_: Uri| {
+                                                            let path = "/tmp/tonic/echo_sock";    
+                                                            UnixStream::connect(path)
+                                                        }))
+                                                        .await?;
+                                        EchoClient::new(channel)
+                                    };
                                     let request = tonic::Request::new(EchoRequest {
                                         message: message.clone(),
                                     });
@@ -59,10 +60,15 @@ macro_rules! bench {
     }
 }
 
-bench!(message_size_1kb, 1024, 1);
-bench!(message_size_100kb, 100 * 1024, 1);
-bench!(message_size_1mb, 1000 * 1024, 1);
+bench!(message_size_1kb_tcp, 1024, 1, "tcp");
+bench!(message_size_100kb_tcp, 100 * 1024, 1, "tcp");
+bench!(message_size_1mb_tcp, 1000 * 1024, 1, "tcp");
 
-benchmark_group!(message_size, message_size_1kb, message_size_100kb, message_size_1mb);
+bench!(message_size_1kb_uds, 1024, 1, "uds");
+bench!(message_size_100kb_uds, 100 * 1024, 1, "uds");
+bench!(message_size_1mb_uds, 1000 * 1024, 1, "uds");
 
-benchmark_main!(message_size);
+benchmark_group!(tcp, message_size_1kb_tcp, message_size_100kb_tcp, message_size_1mb_tcp);
+benchmark_group!(uds, message_size_1kb_uds, message_size_100kb_uds, message_size_1mb_uds);
+
+benchmark_main!(tcp, uds);
